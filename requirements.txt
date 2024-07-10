@@ -1,0 +1,6 @@
+sqlmodel~=0.0.19
+SQLAlchemy~=2.0.31
+alembic~=1.13.2
+fastapi~=0.111.0
+starlette~=0.37.2
+pydantic~=2.8.0
