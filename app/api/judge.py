@@ -2,7 +2,11 @@ import os
 import subprocess
 import uuid
 import shutil
+from typing import List
+
 from fastapi import HTTPException
+
+from app.models import TestCase, SubmissionCreate
 
 DIR_NAME = "executions"
 FILE_PATH_TEMPLATE = f"{DIR_NAME}/{{}}.{{}}"
@@ -26,11 +30,10 @@ def delete_folder(folder_path):
 
 
 class Judge:
-    def __init__(self, source_code, language, input_texts, output_texts):
-        self.source_code = source_code
-        self.language = language
-        self.input_texts = input_texts
-        self.output_texts = output_texts
+    def __init__(self, submission_in: SubmissionCreate, testcases: List["TestCase"]):
+        self.source_code = submission_in.source
+        self.language = submission_in.language
+        self.testcases = testcases
         self.score = 100.0
         self.random_str = str(uuid.uuid4())
         self.file_path = self.get_file_path()
@@ -124,34 +127,34 @@ class Judge:
         self.run_interpreter(["python", self.file_path])
 
     def run_executable(self, exec_path):
-        for i, input_text in enumerate(self.input_texts):
-            print(f"Running executable for input {i + 1}/{len(self.input_texts)}")
+        for i, testcase in enumerate(self.testcases):
+            print(f"Running executable for input {i + 1}/{len(self.testcases)}")
             process = subprocess.Popen([exec_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE, text=True)
-            output, error = process.communicate(input_text)
-            print(f"Expected output: {self.output_texts[i].strip()}")
+            output, error = process.communicate(testcase.input_text)
+            print(f"Expected output: {testcase.output_texts.strip()}")
             print(f"Actual output: {output.strip()}")
             print(f"Error: {error}")
             if process.returncode != 0 or error:
                 self.score = 0.0
                 break
-            if output.strip() != self.output_texts[i].strip():
-                self.score -= 100.0 / len(self.input_texts)
+            if output.strip() != testcase.output_texts.strip():
+                self.score -= 100.0 / len(self.testcases)
 
     def run_interpreter(self, command):
-        for i, input_text in enumerate(self.input_texts):
-            print(f"Running interpreter for input {i + 1}/{len(self.input_texts)}")
+        for i, testcase in enumerate(self.testcases):
+            print(f"Running interpreter for input {i + 1}/{len(self.testcases)}")
             process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                        text=True)
-            output, error = process.communicate(input_text)
-            print(f"Expected output: {self.output_texts[i].strip()}")
+            output, error = process.communicate(testcase.input_text)
+            print(f"Expected output: {testcase.output_text.strip()}")
             print(f"Actual output: {output.strip()}")
             print(f"Error: {error}")
             if process.returncode != 0 or error:
                 self.score = 0.0
                 break
-            if output.strip() != self.output_texts[i].strip():
-                self.score -= 100.0 / len(self.input_texts)
+            if output.strip() != testcase.output_text.strip():
+                self.score -= 100.0 / len(self.testcases)
 
     def get_score(self):
         return self.score

@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 
+from app.api.judge import Judge
 from app.core.security import get_password_hash, verify_password
 from app.models import User, UserCreate, ProblemCreate, Problem, TestCasesCreate, TestCase, CourseCreate, Course, \
     CourseProblem, CourseProblemCreate, SubmissionCreate, Submission
@@ -96,11 +97,15 @@ def add_problem_in_course(*, session: Session, course_problem_in: CourseProblemC
 
 
 def create_submission(*, session: Session, submission_in: SubmissionCreate, user_id: int, course_problem_id: int) -> Submission:
-    # 채점
+    problem = session.get(CourseProblem, course_problem_id).problem
+
+    judge = Judge(submission_in=submission_in, testcases=problem.testcases)
+    judge.run_code()
+
     db_submission = Submission.model_validate(submission_in, update={
         "user_id": user_id,
         "problem_id": course_problem_id,
-        "score": 0, # 수정 필요
+        "score": judge.get_score(),
         "create_date": datetime.now()
     })
     session.add(db_submission)

@@ -29,6 +29,7 @@ def read_submission_list(session: SessionDep,
                          problem_id: int | None):
     """
     문제 채점 결과 목록(제출id, ) 검색 가능: 검색용 쿼리 매개변수
+    페이징 문제로 아직 미구현
     """
     #TODO
     #TODO 페이징 추가 필요
@@ -36,7 +37,7 @@ def read_submission_list(session: SessionDep,
 
 
 @router.get("/{submission_id}/source", response_model=SubmissionPublic)
-def read_my_source(session: SessionDep, current_user: CurrentUser, submission_id: int):
+def read_my_submission(session: SessionDep, current_user: CurrentUser, submission_id: int):
     """
     제출 코드 확인(교수, 학생), 제출자 본인이거나 교수자 아니면 확인 불가
     """

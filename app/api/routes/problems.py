@@ -12,7 +12,7 @@ from app.models import ProblemPublic, ProblemCreate, TestCasesCreate, Problem, C
 router = APIRouter()
 
 
-@router.get("/", dependencies=[Depends(get_current_user)], response_model=ProblemsPublic)
+@router.get("/", dependencies=[Depends(get_current_professor)], response_model=ProblemsPublic)
 def read_all_problems_list(session: SessionDep) -> Any:
     """
     전체 문제 리스트 읽기
@@ -26,6 +26,7 @@ def read_all_problems_list(session: SessionDep) -> Any:
 def read_problem(session: SessionDep, problem_id: int) -> Any:
     """
     전체 문제 중 해당 problem_id를 가진 문제 읽기
+    TODO: 현재 시간과 문제 end_date 비교해서 접근 막기
     """
     problem = session.get(Problem, problem_id)
     if not problem:
