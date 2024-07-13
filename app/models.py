@@ -15,7 +15,7 @@ class LanguageEnum(str, Enum):
 
 class UserBase(SQLModel):
     student_id: str = Field(unique=True, index=True, max_length=8)
-    email: EmailStr | None = Field(unique=True, max_length=255)
+    # email: EmailStr | None = Field(unique=True, max_length=255)
     is_professor: bool = False
     is_superuser: bool = False
 
@@ -26,12 +26,10 @@ class UserCreate(UserBase):
 
 class UserRegister(SQLModel):
     student_id: str
-    # email: EmailStr = Field(max_length=255)
     password: str = Field(min_length=8, max_length=40)
     verify_password: str = Field(min_length=8, max_length=40)
 
 
-# Database model, database table inferred from class name
 class User(UserBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     hashed_password: str
@@ -56,7 +54,6 @@ class CourseCreate(CourseBase):
     professor_id: int
 
 
-# Database model, database table inferred from class name
 class Course(CourseBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     is_active: bool = False
@@ -64,12 +61,10 @@ class Course(CourseBase, table=True):
     professor_id: int | None = Field(default=None, foreign_key="user.id")
     professor: User | None = Relationship(back_populates="courses_as_professor")
 
-    tas: List["TA"] | None = Relationship(back_populates="courses_as_ta")
-    students: List["Student"] | None = Relationship(back_populates="courses_as_student")
+    tas: List["TA"] | None = Relationship(back_populates="course")
+    students: List["Student"] | None = Relationship(back_populates="course")
 
     problems: List["CourseProblem"] | None = Relationship(back_populates="course")
-    # languages: list["LanguageEnum"] = Field(sa_column_kwargs={"type_": "ENUM(LanguageEnum)"})
-    # 사용할 수 있는 언어
 
 
 class CoursePublic(CourseBase):
@@ -82,18 +77,22 @@ class CoursesPublic(SQLModel):
     count: int
 
 
-# Database model, database table inferred from class name
 class TA(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     course_id: int | None = Field(default=None, foreign_key="course.id", primary_key=True)
+    course: Course | None = Relationship(back_populates="tas")
+
     user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
+    user: User | None = Relationship(back_populates="courses_as_ta")
 
 
-# Database model, database table inferred from class name
 class Student(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     course_id: int | None = Field(default=None, foreign_key="course.id", primary_key=True)
+    course: Course | None = Relationship(back_populates="students")
+
     user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
+    user: User | None = Relationship(back_populates="courses_as_student")
 
 
 class ProblemBase(SQLModel):
@@ -101,12 +100,11 @@ class ProblemBase(SQLModel):
     content: str
 
 
-# Database model, database table inferred from class name
 class Problem(ProblemBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     testcases: List["TestCase"] | None = Relationship(back_populates="problem")
 
-    course_problems: List["CourseProblem"] | None = Relationship(back_populates="original_problem")
+    course_problems: List["CourseProblem"] | None = Relationship(back_populates="problem")
 
 
 class ProblemCreate(ProblemBase):
@@ -156,7 +154,6 @@ class SubmissionCreate(SubmissionBase):
     language: str
 
 
-# Database model, database table inferred from class name
 class Submission(SubmissionBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
@@ -184,11 +181,10 @@ class TestCaseBase(SQLModel):
 
 
 class TestCasesCreate(TestCaseBase):
-    input_texts: List[str]   # input이 없으면 None ? 빈문자열?
+    input_texts: List[str]
     output_texts: List[str]
 
 
-# Database model, database table inferred from class name
 class TestCase(TestCaseBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
@@ -196,12 +192,10 @@ class TestCase(TestCaseBase, table=True):
     problem: Problem | None = Relationship(back_populates="testcases")
 
 
-# Generic message
 class Message(SQLModel):
     message: str
 
 
-# JSON payload containing access token
 class Token(SQLModel):
     access_token: str
     token_type: str = "bearer"
@@ -209,6 +203,5 @@ class Token(SQLModel):
     is_professor: bool
 
 
-# Contents of JWT token
 class TokenPayload(SQLModel):
     sub: int | None = None

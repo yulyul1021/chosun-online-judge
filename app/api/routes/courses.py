@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import func
 from sqlmodel import select
 from starlette import status
 
@@ -19,13 +20,17 @@ def read_my_course_list(session: SessionDep, current_user: CurrentUser) -> Any:
     """
     if current_user.is_professor:
         statement = select(Course).where(Course.professor_id == current_user.id)
-        count = session.exec(statement).one()
         courses = session.exec(statement).all()
+        count = session.exec(select(func.count()).select_from(statement.subquery())).one()
     else:
-        statement = (select(Course).join(Student)
-                     .where(Student.user_id == current_user.id and Course.is_active))
-        count = session.exec(statement).one()
+        statement = (
+            select(Course)
+            .join(Student)
+            .where(Student.user_id == current_user.id)
+            .where(Course.is_active)
+        )
         courses = session.exec(statement).all()
+        count = session.exec(select(func.count()).select_from(statement.subquery())).one()
 
     return CoursesPublic(data=courses, count=count)
 
@@ -42,7 +47,7 @@ def create_course(session: SessionDep, course_in: CourseCreate) -> Course:
 @router.patch("/{course_id}/disable", dependencies=[Depends(get_current_professor)], response_model=Message)
 def disable_course(session: SessionDep, current_user: CurrentUser, course_id: int) -> Message:
     """
-    수업 비공개
+    해당 수업course_id의 담당 교수자: 수업 비공개
     """
     course = session.query(Course).filter(Course.id == course_id).first()
 
@@ -63,7 +68,7 @@ def disable_course(session: SessionDep, current_user: CurrentUser, course_id: in
 @router.patch("/{course_id}/enable", dependencies=[Depends(get_current_professor)], response_model=Message)
 def enable_course(session: SessionDep, current_user: CurrentUser, course_id: int) -> Message:
     """
-    수업 공개
+    해당 수업course_id의 담당 교수자: 수업 공개
     """
     course = session.query(Course).filter(Course.id == course_id).first()
 
@@ -84,7 +89,7 @@ def enable_course(session: SessionDep, current_user: CurrentUser, course_id: int
 @router.get("/{course_id}", response_model=ProblemsPublic)
 def read_problem_list_in_my_course(session: SessionDep, current_user: CurrentUser, course_id: int):
     """
-    수업에 있는 문제 목록
+    해당 수업course_id의 담당 교수자 및 학생: 수업에 있는 문제 목록
     """
     course = session.query(Course).filter(Course.id == course_id).first()
 
@@ -103,21 +108,10 @@ def read_problem_list_in_my_course(session: SessionDep, current_user: CurrentUse
     return ProblemsPublic(data=problems, count=count)
 
 
-@router.get("/{course_id}/{problem_id}", dependencies=[Depends(get_current_user)], response_model=ProblemPublic)
-def read_problem_in_course(session: SessionDep, problem_id: int) -> Any:
-    """
-    수업 내의 문제 중 해당 (course)problem_id를 가진 문제 읽기
-    """
-    problem = session.get(CourseProblem, problem_id)
-    if not problem:
-        raise HTTPException(status_code=404, detail="Problem not found")
-    return problem
-
-
 @router.post("/{course_id}/{problem_id}/add", dependencies=[Depends(get_current_professor)], response_model=ProblemPublic)
 def add_problem(session: SessionDep, current_user: CurrentUser, course_problem_in: CourseProblemCreate, course_id: int, problem_id: int) -> Any:
     """
-    전체 문제 목록에서 문제(problem_id) 가져와서 수업(course_id)에 추가하기
+    해당 수업course_id의 담당 교수자: 전체 문제 목록에서 문제(problem_id) 가져와서 수업(course_id)에 추가하기
     """
     course = session.query(Course).filter(Course.id == course_id).first()
     problem = session.query(Problem).filter(Problem.id == problem_id).first()
@@ -131,52 +125,6 @@ def add_problem(session: SessionDep, current_user: CurrentUser, course_problem_i
 
     new_problem = crud.add_problem_in_course(course_problem_in=course_problem_in, course_id=course_id, problem_id=problem_id)
     return new_problem
-
-
-@router.patch("/{course_id}/{problem_id}/disable", dependencies=[Depends(get_current_professor)],
-              response_model=Message)
-def disable_problem(session: SessionDep, current_user: CurrentUser, course_id: int, problem_id: int) -> Message:
-    """
-    수업 내의 문제 중 해당 (course)problem_id를 가진 문제 비공개
-    """
-    course = session.query(Course).filter(Course.id == course_id).first()
-    problem = session.query(CourseProblem).filter(CourseProblem.id == problem_id).first()
-
-    if not course or not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
-
-    if course.professor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="You do not have permission to update this course")
-
-    problem.is_active = False
-    session.add(problem)
-    session.commit()
-    session.refresh(problem)
-    return Message(messade="문제가 비공개로 전환 되었습니다.")
-
-
-@router.patch("/{course_id}/{problem_id}/enable", dependencies=[Depends(get_current_professor)],
-              response_model=Message)
-def enable_problem(session: SessionDep, current_user: CurrentUser, course_id: int, problem_id: int) -> Message:
-    """
-    수업 내의 문제 중 해당 (course)problem_id를 가진 문제 공개
-    """
-    course = session.query(Course).filter(Course.id == course_id).first()
-    problem = session.query(CourseProblem).filter(CourseProblem.id == problem_id).first()
-
-    if not course or not problem:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
-
-    if course.professor_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="You do not have permission to update this course")
-
-    problem.is_active = True
-    session.add(problem)
-    session.commit()
-    session.refresh(problem)
-    return Message(messade="문제가 공개로 전환 되었습니다.")
 
 
 #TODO 수업에 학생들 추가(관리자) -> 파일읽기

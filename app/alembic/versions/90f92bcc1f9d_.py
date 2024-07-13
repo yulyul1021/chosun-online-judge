@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 0f7ccaf36372
+Revision ID: 90f92bcc1f9d
 Revises: 
-Create Date: 2024-07-10 22:42:16.745110
+Create Date: 2024-07-13 22:57:25.160953
 
 """
 from typing import Sequence, Union
@@ -13,7 +13,7 @@ import sqlmodel # 추가
 
 
 # revision identifiers, used by Alembic.
-revision: str = '0f7ccaf36372'
+revision: str = '90f92bcc1f9d'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,13 +29,11 @@ def upgrade() -> None:
     )
     op.create_table('user',
     sa.Column('student_id', sqlmodel.sql.sqltypes.AutoString(length=8), nullable=False),
-    sa.Column('email', sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
     sa.Column('is_professor', sa.Boolean(), nullable=False),
     sa.Column('is_superuser', sa.Boolean(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('hashed_password', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('email')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_user_student_id'), 'user', ['student_id'], unique=True)
     op.create_table('course',

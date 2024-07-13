@@ -13,9 +13,10 @@ router = APIRouter()
 
 
 @router.get("/", dependencies=[Depends(get_current_professor)], response_model=ProblemsPublic)
-def read_all_problems_list(session: SessionDep) -> Any:
+def read_all_problem_list(session: SessionDep) -> Any:
     """
-    전체 문제 리스트 읽기
+    교수자: 전체 문제 리스트 읽기
+    TODO 페이징 처리
     """
     statement = select(Problem)
     problems = session.exec(statement).all()
@@ -25,7 +26,7 @@ def read_all_problems_list(session: SessionDep) -> Any:
 @router.get("/{problem_id}", dependencies=[Depends(get_current_user)], response_model=ProblemPublic)
 def read_problem(session: SessionDep, problem_id: int) -> Any:
     """
-    전체 문제 중 해당 problem_id를 가진 문제 읽기
+    교수자: 전체 문제 중 해당 problem_id를 가진 문제 읽기
     TODO: 현재 시간과 문제 end_date 비교해서 접근 막기
     """
     problem = session.get(Problem, problem_id)
@@ -38,7 +39,7 @@ def read_problem(session: SessionDep, problem_id: int) -> Any:
 def create_problem(session: SessionDep, course_id: int, problem_create: ProblemCreate, testcases_in: TestCasesCreate
 ) -> Any:
     """
-    수업 내에서 새 문제 생성
+    해당 수업course_id의 담당 교수자: 수업 내에서 새 문제 생성
     """
     course = session.query(Course).filter(Course.id == course_id).first()
 
@@ -50,6 +51,63 @@ def create_problem(session: SessionDep, course_id: int, problem_create: ProblemC
                                             testcases_in=testcases_in,
                                             course_id=course_id)
     return problem
+
+
+@router.get("/{course_id}/{problem_id}", dependencies=[Depends(get_current_user)], response_model=ProblemPublic)
+def read_problem_in_course(session: SessionDep, problem_id: int) -> Any:
+    """
+    해당 수업course_id의 담당 교수자, 학생: 수업 내의 문제 중 해당 (course)problem_id를 가진 문제 읽기
+    """
+    problem = session.get(CourseProblem, problem_id)
+    if not problem:
+        raise HTTPException(status_code=404, detail="Problem not found")
+    return problem
+
+
+@router.patch("/{course_id}/{problem_id}/disable", dependencies=[Depends(get_current_professor)],
+              response_model=Message)
+def disable_problem(session: SessionDep, current_user: CurrentUser, course_id: int, problem_id: int) -> Message:
+    """
+    해당 수업course_id의 담당 교수자: 수업 내의 문제 중 해당 (course)problem_id를 가진 문제 비공개
+    """
+    course = session.query(Course).filter(Course.id == course_id).first()
+    problem = session.query(CourseProblem).filter(CourseProblem.id == problem_id).first()
+
+    if not course or not problem:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+
+    if course.professor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="You do not have permission to update this course")
+
+    problem.is_active = False
+    session.add(problem)
+    session.commit()
+    session.refresh(problem)
+    return Message(messade="문제가 비공개로 전환 되었습니다.")
+
+
+@router.patch("/{course_id}/{problem_id}/enable", dependencies=[Depends(get_current_professor)],
+              response_model=Message)
+def enable_problem(session: SessionDep, current_user: CurrentUser, course_id: int, problem_id: int) -> Message:
+    """
+    해당 수업course_id의 담당 교수자: 수업 내의 문제 중 해당 (course)problem_id를 가진 문제 공개
+    """
+    course = session.query(Course).filter(Course.id == course_id).first()
+    problem = session.query(CourseProblem).filter(CourseProblem.id == problem_id).first()
+
+    if not course or not problem:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
+
+    if course.professor_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="You do not have permission to update this course")
+
+    problem.is_active = True
+    session.add(problem)
+    session.commit()
+    session.refresh(problem)
+    return Message(messade="문제가 공개로 전환 되었습니다.")
 
 
 #TODO 문제 수정(문제, 테케 업데이트)

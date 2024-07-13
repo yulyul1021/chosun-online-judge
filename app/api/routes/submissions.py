@@ -39,7 +39,7 @@ def read_submission_list(session: SessionDep,
 @router.get("/{submission_id}/source", response_model=SubmissionPublic)
 def read_my_submission(session: SessionDep, current_user: CurrentUser, submission_id: int):
     """
-    제출 코드 확인(교수, 학생), 제출자 본인이거나 교수자 아니면 확인 불가
+    제출자 본인이거나 교수자: 제출 코드 확인(교수, 학생)
     """
     submission = session.get(Submission, submission_id)
     if not submission:
