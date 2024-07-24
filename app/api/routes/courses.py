@@ -6,7 +6,7 @@ from sqlmodel import select
 from starlette import status
 
 from app import crud
-from app.api.dependencies import SessionDep, CurrentUser, get_current_superuser, get_current_professor, get_current_user
+from app.api.dependencies import SessionDep, CurrentUser, get_current_superuser, get_current_professor
 from app.models import (CoursesPublic, Course, Student, CoursePublic, CourseCreate,
                         ProblemsPublic, Message, CourseProblem, ProblemPublic, Problem, CourseProblemCreate)
 
@@ -83,7 +83,7 @@ def enable_course(session: SessionDep, current_user: CurrentUser, course_id: int
     session.add(course)
     session.commit()
     session.refresh(course)
-    return Message(messade="수업이 공개로 전환 되었습니다.")
+    return Message(message="수업이 공개로 전환 되었습니다.")
 
 
 @router.get("/{course_id}", response_model=ProblemsPublic)
@@ -127,5 +127,4 @@ def add_problem(session: SessionDep, current_user: CurrentUser, course_problem_i
     return new_problem
 
 
-#TODO 수업에 학생들 추가(관리자) -> 파일읽기
 #TODO 수업에 조교 임명(교수)

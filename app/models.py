@@ -36,7 +36,7 @@ class User(UserBase, table=True):
     submissions: List["Submission"] | None = Relationship(back_populates="submitter")
 
     courses_as_professor: List["Course"] | None = Relationship(back_populates="professor")
-    courses_as_ta: List["TA"] | None = Relationship(back_populates="user")
+    courses_as_ta: List["TA"] | None = Relationship(back_populates="ta")
     courses_as_student: List["Student"] | None = Relationship(back_populates="user")
 
 
@@ -79,19 +79,19 @@ class CoursesPublic(SQLModel):
 
 class TA(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    course_id: int | None = Field(default=None, foreign_key="course.id", primary_key=True)
+    course_id: int | None = Field(default=None, foreign_key="course.id")
     course: Course | None = Relationship(back_populates="tas")
 
-    user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
-    user: User | None = Relationship(back_populates="courses_as_ta")
+    ta_id: int | None = Field(default=None, foreign_key="user.id")
+    ta: User | None = Relationship(back_populates="courses_as_ta")
 
 
 class Student(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    course_id: int | None = Field(default=None, foreign_key="course.id", primary_key=True)
+    course_id: int | None = Field(default=None, foreign_key="course.id")
     course: Course | None = Relationship(back_populates="students")
 
-    user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
+    user_id: int | None = Field(default=None, foreign_key="user.id")
     user: User | None = Relationship(back_populates="courses_as_student")
 
 

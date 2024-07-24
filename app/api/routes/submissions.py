@@ -1,10 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from starlette import status
 
 from app import crud
-from app.api.dependencies import SessionDep, CurrentUser
+from app.api.dependencies import SessionDep, CurrentUser, get_current_user
 from app.models import SubmissionCreate, Submission, SubmissionPublic, SubmissionsPublic
 
 router = APIRouter()
@@ -22,11 +22,12 @@ def create_submission(session: SessionDep, current_user: CurrentUser, submission
     return submission
 
 
-@router.get("/result", response_model=SubmissionsPublic)
+@router.get("/results", dependencies=[Depends(get_current_user)], response_model=SubmissionsPublic)
 def read_submission_list(session: SessionDep,
-                         student_id: str | None,
+                         student_id: str | None,    # 학번
                          course_id: int | None,
-                         problem_id: int | None):
+                         problem_id: int | None,
+                         skip: int = 0, limit: int = 20):
     """
     문제 채점 결과 목록(제출id, ) 검색 가능: 검색용 쿼리 매개변수
     페이징 문제로 아직 미구현

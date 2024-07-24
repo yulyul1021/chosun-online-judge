@@ -13,11 +13,11 @@ router = APIRouter()
 
 
 @router.get("/", dependencies=[Depends(get_current_professor)], response_model=ProblemsPublic)
-def read_all_problem_list(session: SessionDep) -> Any:
+def read_all_problem_list(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
     """
     교수자: 전체 문제 리스트 읽기
-    TODO 페이징 처리
     """
+    # TODO 페이징 처리
     statement = select(Problem)
     problems = session.exec(statement).all()
     return problems
@@ -27,8 +27,8 @@ def read_all_problem_list(session: SessionDep) -> Any:
 def read_problem(session: SessionDep, problem_id: int) -> Any:
     """
     교수자: 전체 문제 중 해당 problem_id를 가진 문제 읽기
-    TODO: 현재 시간과 문제 end_date 비교해서 접근 막기
     """
+    # TODO: 현재 시간과 문제 end_date 비교해서 접근 막기
     problem = session.get(Problem, problem_id)
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")

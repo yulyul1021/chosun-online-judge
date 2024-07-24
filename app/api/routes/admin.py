@@ -1,3 +1,27 @@
+from fastapi import APIRouter, Depends
+from sqlmodel import select
+
+from app.api.dependencies import SessionDep, get_current_superuser
+from app.models import User
+
+router = APIRouter()
+
+
+@router.get("/users", dependencies=[Depends(get_current_superuser)])
+def read_all_users(session: SessionDep,
+                   student_id: str | None,
+                   skip: int = 0, limit: int = 30):
+    """
+    모든 유저 읽기
+    """
+    # 페이징, 검색 가능
+    statement = select(User)
+    users = session.exec(statement).all()
+    return users
+
+
+
+
 """
 회원
 - 유저 조회(전체 or 검색가능)
