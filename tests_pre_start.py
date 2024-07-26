@@ -52,7 +52,7 @@ def create_course(session: Session) -> None:
     course = crud.create_course(session=session, course_in=course_in)
 
     # Add the student to the course
-    student_relation = Student(course_id=course.id, user_id=student.id)
+    student_relation = Student(course_id=course.id, student_id=student.id)
     session.add(student_relation)
 
     # Add the professor to the course as well, if not already done by create_course

@@ -37,7 +37,10 @@ class User(UserBase, table=True):
 
     courses_as_professor: List["Course"] | None = Relationship(back_populates="professor")
     courses_as_ta: List["TA"] | None = Relationship(back_populates="ta")
-    courses_as_student: List["Student"] | None = Relationship(back_populates="user")
+    courses_as_student: List["Student"] | None = Relationship(back_populates="student")
+
+    created_problems: List["Problem"] | None = Relationship(back_populates="author")
+    modified_problems: List["Problem"] | None = Relationship(back_populates="modifier")
 
 
 class UserPublic(UserBase):
@@ -61,8 +64,8 @@ class Course(CourseBase, table=True):
     professor_id: int | None = Field(default=None, foreign_key="user.id")
     professor: User | None = Relationship(back_populates="courses_as_professor")
 
-    tas: List["TA"] | None = Relationship(back_populates="course")
-    students: List["Student"] | None = Relationship(back_populates="course")
+    tas: List["TA"] | None = Relationship(back_populates="courses_as_ta")
+    students: List["Student"] | None = Relationship(back_populates="courses_as_student")
 
     problems: List["CourseProblem"] | None = Relationship(back_populates="course")
 
@@ -91,8 +94,8 @@ class Student(SQLModel, table=True):
     course_id: int | None = Field(default=None, foreign_key="course.id")
     course: Course | None = Relationship(back_populates="students")
 
-    user_id: int | None = Field(default=None, foreign_key="user.id")
-    user: User | None = Relationship(back_populates="courses_as_student")
+    student_id: int | None = Field(default=None, foreign_key="user.id")
+    student: User | None = Relationship(back_populates="courses_as_student")
 
 
 class ProblemBase(SQLModel):
@@ -104,6 +107,16 @@ class Problem(ProblemBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     testcases: List["TestCase"] | None = Relationship(back_populates="problem")
 
+    author_id: int = Field(default=None, foreign_key="user.id", nullable=False)
+    author: User = Relationship(back_populates="created_problems")
+    create_date: datetime
+
+    modifier_id: int = Field(default=None, foreign_key="user.id", nullable=False)   # 마지막으로 수정한 사람
+    modifier: User | None = Relationship(back_populates="modified_problems")
+    modify_date: datetime | None
+
+    category: str | None    # 문제 분류
+
     course_problems: List["CourseProblem"] | None = Relationship(back_populates="problem")
 
 
@@ -112,6 +125,7 @@ class ProblemCreate(ProblemBase):
     content: str
     start_date: datetime
     end_date: datetime
+    category: str | None
 
 
 class CourseProblemCreate(SQLModel):

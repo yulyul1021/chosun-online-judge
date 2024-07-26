@@ -12,7 +12,7 @@ from app.models import ProblemPublic, ProblemCreate, TestCasesCreate, Problem, C
 router = APIRouter()
 
 
-@router.get("/", dependencies=[Depends(get_current_professor)], response_model=ProblemsPublic)
+@router.get("/all", dependencies=[Depends(get_current_professor)], response_model=ProblemsPublic)
 def read_all_problem_list(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
     """
     교수자: 전체 문제 리스트 읽기
@@ -23,20 +23,23 @@ def read_all_problem_list(session: SessionDep, skip: int = 0, limit: int = 100) 
     return problems
 
 
-@router.get("/{problem_id}", dependencies=[Depends(get_current_user)], response_model=ProblemPublic)
+@router.get("/all/{problem_id}", dependencies=[Depends(get_current_user)], response_model=ProblemPublic)
 def read_problem(session: SessionDep, problem_id: int) -> Any:
     """
     교수자: 전체 문제 중 해당 problem_id를 가진 문제 읽기
     """
-    # TODO: 현재 시간과 문제 end_date 비교해서 접근 막기
     problem = session.get(Problem, problem_id)
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
     return problem
 
 
-@router.post("/{course_id}/create", dependencies=[Depends(get_current_professor)], response_model=ProblemPublic)
-def create_problem(session: SessionDep, course_id: int, problem_create: ProblemCreate, testcases_in: TestCasesCreate
+@router.post("/create/{course_id}", dependencies=[Depends(get_current_professor)], response_model=ProblemPublic)
+def create_problem(session: SessionDep,
+                   current_user: CurrentUser,
+                   course_id: int,
+                   problem_create: ProblemCreate,
+                   testcases_in: TestCasesCreate
 ) -> Any:
     """
     해당 수업course_id의 담당 교수자: 수업 내에서 새 문제 생성
@@ -49,11 +52,13 @@ def create_problem(session: SessionDep, course_id: int, problem_create: ProblemC
     problem = crud.create_problem_in_course(session=session,
                                             problem_create=problem_create,
                                             testcases_in=testcases_in,
-                                            course_id=course_id)
+                                            course_id=course_id,
+                                            author_id=current_user.id
+                                            )
     return problem
 
 
-@router.get("/{course_id}/{problem_id}", dependencies=[Depends(get_current_user)], response_model=ProblemPublic)
+@router.get("/courses/{problem_id}", dependencies=[Depends(get_current_user)], response_model=ProblemPublic)
 def read_problem_in_course(session: SessionDep, problem_id: int) -> Any:
     """
     해당 수업course_id의 담당 교수자, 학생: 수업 내의 문제 중 해당 (course)problem_id를 가진 문제 읽기
@@ -64,14 +69,14 @@ def read_problem_in_course(session: SessionDep, problem_id: int) -> Any:
     return problem
 
 
-@router.patch("/{course_id}/{problem_id}/disable", dependencies=[Depends(get_current_professor)],
+@router.patch("/courses/disable/{problem_id}", dependencies=[Depends(get_current_professor)],
               response_model=Message)
-def disable_problem(session: SessionDep, current_user: CurrentUser, course_id: int, problem_id: int) -> Message:
+def disable_problem(session: SessionDep, current_user: CurrentUser, problem_id: int) -> Message:
     """
     해당 수업course_id의 담당 교수자: 수업 내의 문제 중 해당 (course)problem_id를 가진 문제 비공개
     """
-    course = session.query(Course).filter(Course.id == course_id).first()
     problem = session.query(CourseProblem).filter(CourseProblem.id == problem_id).first()
+    course = session.query(Course).filter(Course.id == problem.course_id).first()
 
     if not course or not problem:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")
@@ -87,14 +92,14 @@ def disable_problem(session: SessionDep, current_user: CurrentUser, course_id: i
     return Message(messade="문제가 비공개로 전환 되었습니다.")
 
 
-@router.patch("/{course_id}/{problem_id}/enable", dependencies=[Depends(get_current_professor)],
+@router.patch("/courses/enable/{problem_id}", dependencies=[Depends(get_current_professor)],
               response_model=Message)
-def enable_problem(session: SessionDep, current_user: CurrentUser, course_id: int, problem_id: int) -> Message:
+def enable_problem(session: SessionDep, current_user: CurrentUser, problem_id: int) -> Message:
     """
     해당 수업course_id의 담당 교수자: 수업 내의 문제 중 해당 (course)problem_id를 가진 문제 공개
     """
-    course = session.query(Course).filter(Course.id == course_id).first()
     problem = session.query(CourseProblem).filter(CourseProblem.id == problem_id).first()
+    course = session.query(Course).filter(Course.id == problem.course_id).first()
 
     if not course or not problem:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not found")

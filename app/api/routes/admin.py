@@ -20,11 +20,16 @@ def read_all_users(session: SessionDep,
     return users
 
 
+@router.post("/users/{user_id}/")
+def change_permission(session: SessionDep):
+    """
+    해당 사용자(user_id) 권한 변경
+    """
 
 
 """
 회원
-- 유저 조회(전체 or 검색가능)
+- 유저 조회(전체 or 검색가능)*
 - 특정 유저의 수업/제출 조회
 - 유저 CRUD
 - 특정 유저 권한 변경

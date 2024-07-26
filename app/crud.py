@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from app.api.judge import Judge
 from app.core.security import get_password_hash, verify_password
 from app.models import User, UserCreate, ProblemCreate, Problem, TestCasesCreate, TestCase, CourseCreate, Course, \
-    CourseProblem, CourseProblemCreate, SubmissionCreate, Submission
+    CourseProblem, CourseProblemCreate, SubmissionCreate, Submission, Student
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
@@ -42,8 +42,12 @@ def create_course(*, session: Session, course_in: CourseCreate) -> Course:
 
 
 def create_problem_in_course(*, session: Session, problem_create: ProblemCreate,
-                             testcases_in: TestCasesCreate, course_id: int) -> CourseProblem:
-    problem = create_problem(session=session, problem_create=problem_create, testcases_in=testcases_in)
+                             testcases_in: TestCasesCreate, course_id: int, author_id: int) -> CourseProblem:
+    problem = create_problem(session=session,
+                             problem_create=problem_create,
+                             testcases_in=testcases_in,
+                             author_id=author_id)
+
     db_problem = CourseProblem.model_validate({
         "start_date": problem_create.start_date,
         "end_date": problem_create.end_date,
@@ -58,11 +62,11 @@ def create_problem_in_course(*, session: Session, problem_create: ProblemCreate,
 
 
 def create_problem(*, session: Session, problem_create: ProblemCreate,
-                   testcases_in: TestCasesCreate) -> Problem:
+                   testcases_in: TestCasesCreate, author_id: int) -> Problem:
     db_problem = Problem.model_validate({
         "title": problem_create.title,
         "content": problem_create.content
-    })
+    }, update={"author_id": author_id})
     session.add(db_problem)
     session.commit()
     session.refresh(db_problem)
@@ -85,7 +89,7 @@ def create_testcases(*, session: Session, testcases_in: TestCasesCreate, problem
     return None
 
 
-def add_problem_in_course(*, session: Session, course_problem_in: CourseProblemCreate, course_id: int, problem_id: int) -> CourseProblem:
+def add_problem_to_course(*, session: Session, course_problem_in: CourseProblemCreate, course_id: int, problem_id: int) -> CourseProblem:
     db_course_problem = CourseProblem.model_validate(course_problem_in, update={
         "course_id": course_id,
         "problem_id": problem_id
@@ -94,6 +98,17 @@ def add_problem_in_course(*, session: Session, course_problem_in: CourseProblemC
     session.commit()
     session.refresh(db_course_problem)
     return db_course_problem
+
+
+def add_student_to_course(*, session: Session, course_id: int, student_id: int) -> Student:
+    db_student = Student.model_validate({
+        "course_id": course_id,
+        "student_id": student_id,
+    })
+    session.add(db_student)
+    session.commit()
+    session.refresh(db_student)
+    return db_student
 
 
 def create_submission(*, session: Session, submission_in: SubmissionCreate, user_id: int, course_problem_id: int) -> Submission:
